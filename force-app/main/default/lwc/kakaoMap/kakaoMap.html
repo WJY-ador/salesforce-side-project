@@ -1,0 +1,20 @@
+<template>
+    <div class="map-wrap">
+        <!-- 주소 검색 입력창 -->
+        <div class="search-box">
+            <input
+                type="text"
+                placeholder="주소를 입력하세요"
+                value={searchKeyword}
+                onchange={handleInput}
+            />
+            <button onclick={handleSearch}>검색</button>
+        </div>
+        <!-- 지도 렌더링 영역 -->
+        <div id="map" class="map-container"></div>
+        <!-- 선택된 주소 표시 -->
+        <template if:true={selectedAddress}>
+            <p class="selected-addr">선택된 주소: {selectedAddress}</p>
+        </template>
+    </div>
+</template>
