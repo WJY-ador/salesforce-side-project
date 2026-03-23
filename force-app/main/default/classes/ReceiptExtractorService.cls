@@ -46,6 +46,22 @@ public with sharing class ReceiptExtractorService {
         public String transaction_date;
         public Decimal total_amount;
         public List<ReceiptItemDTO> items;
+        public String category;
+        public String summary;
+        public Boolean is_anomaly;
+        public String anomaly_reason;
+    }
+
+    private static final List<String> VALID_CATEGORIES = new List<String>{
+        '식비', '교통비', '숙박비', '회의비', '접대비', '소모품비', '기타'
+    };
+
+    private static String mapCategory(String aiCategory) {
+        if (aiCategory == null) return '기타';
+        for (String valid : VALID_CATEGORIES) {
+            if (aiCategory.contains(valid)) return valid;
+        }
+        return '기타';
     }
 
     public class RequestDTO {
@@ -166,6 +182,30 @@ public with sharing class ReceiptExtractorService {
                     } catch (Exception e) {
                     }
                 }
+            }
+
+            // Category: 첫 번째 결과 기준 (Picklist 매핑)
+            upd.Category__c = mapCategory(firstResult != null ? firstResult.category : null);
+
+            // Summary: 여러 영수증이면 합쳐서, 하나면 그대로
+            List<String> summaries = new List<String>();
+            Boolean anyAnomaly = false;
+            List<String> anomalyReasons = new List<String>();
+
+            for (ReceiptResponseDTO r : rawResults) {
+                if (r.summary != null) summaries.add(r.summary);
+                if (r.is_anomaly == true) {
+                    anyAnomaly = true;
+                    if (r.anomaly_reason != null) anomalyReasons.add(r.anomaly_reason);
+                }
+            }
+
+            if (!summaries.isEmpty()) {
+                upd.Summary__c = String.join(summaries, ' / ');
+            }
+            upd.IsAnomaly__c = anyAnomaly;
+            if (!anomalyReasons.isEmpty()) {
+                upd.AnomalyReason__c = String.join(anomalyReasons, ' | ');
             }
         }
 
