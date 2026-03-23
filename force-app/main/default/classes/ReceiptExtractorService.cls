@@ -1,8 +1,38 @@
 public with sharing class ReceiptExtractorService {
     @AuraEnabled
-    public static String enqueueExpenseProcessing(Id expenseId) {
-        Id jobId = System.enqueueJob(new ReceiptExtractorQueueable(expenseId));
-        return (String) jobId;
+    public static List<String> checkDuplicateFiles(Id expenseId) {
+        List<ContentDocumentLink> cdls = [
+            SELECT ContentDocumentId
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId = :expenseId
+        ];
+
+        Set<Id> docIds = new Set<Id>();
+        for (ContentDocumentLink cdl : cdls) {
+            docIds.add(cdl.ContentDocumentId);
+        }
+
+        List<ContentVersion> versions = [
+            SELECT Title
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :docIds
+              AND IsLatest = true
+        ];
+
+        Map<String, Integer> titleCount = new Map<String, Integer>();
+        for (ContentVersion cv : versions) {
+            Integer cnt = titleCount.containsKey(cv.Title) ? titleCount.get(cv.Title) : 0;
+            titleCount.put(cv.Title, cnt + 1);
+        }
+
+        List<String> duplicates = new List<String>();
+        for (String title : titleCount.keySet()) {
+            if (titleCount.get(title) > 1) {
+                duplicates.add(title);
+            }
+        }
+
+        return duplicates;
     }
 
     public class ReceiptItemDTO {
