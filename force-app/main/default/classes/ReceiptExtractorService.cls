@@ -52,6 +52,13 @@ public with sharing class ReceiptExtractorService {
         public String anomaly_reason;
     }
 
+    private static final String BATCH_ENDPOINT =
+        'https://receipt-extractor-388173831980.us-central1.run.app/extract-receipts-batch';
+
+    private static final Set<String> SUPPORTED_EXTENSIONS = new Set<String>{
+        'png', 'jpg', 'jpeg', 'webp'
+    };
+
     private static final List<String> VALID_CATEGORIES = new List<String>{
         '식비', '교통비', '숙박비', '회의비', '접대비', '소모품비', '기타'
     };
@@ -67,6 +74,10 @@ public with sharing class ReceiptExtractorService {
     public class RequestDTO {
         public String image_base64;
         public String mime_type;
+    }
+
+    public class BatchRequestDTO {
+        public List<RequestDTO> receipts;
     }
 
     @AuraEnabled
@@ -106,49 +117,64 @@ public with sharing class ReceiptExtractorService {
             throw new AuraHandledException('처리할 최신 파일이 없습니다.');
         }
 
-        Decimal totalAmountSum = 0;
-        List<String> summaryBlocks = new List<String>();
-        List<ReceiptResponseDTO> rawResults = new List<ReceiptResponseDTO>();
-
-        Http http = new Http();
+        // 지원 이미지만 필터링하여 배치 요청 구성
+        List<RequestDTO> requestList = new List<RequestDTO>();
+        List<ContentVersion> filteredVersions = new List<ContentVersion>();
 
         for (ContentVersion cv : versions) {
             if (!isSupportedImage(cv.FileExtension)) {
                 continue;
             }
+            RequestDTO r = new RequestDTO();
+            r.image_base64 = EncodingUtil.base64Encode(cv.VersionData);
+            r.mime_type = getMimeType(cv.FileExtension);
+            requestList.add(r);
+            filteredVersions.add(cv);
+        }
 
-            String mimeType = getMimeType(cv.FileExtension);
-            String imageBase64 = EncodingUtil.base64Encode(cv.VersionData);
+        if (requestList.isEmpty()) {
+            throw new AuraHandledException('지원되는 이미지 파일이 없습니다. (png, jpg, jpeg, webp)');
+        }
 
-            RequestDTO reqBody = new RequestDTO();
-            reqBody.image_base64 = imageBase64;
-            reqBody.mime_type = mimeType;
+        // 배치 엔드포인트에 한 번에 전송
+        BatchRequestDTO batchBody = new BatchRequestDTO();
+        batchBody.receipts = requestList;
 
-            HttpRequest req = new HttpRequest();
-            req.setEndpoint('https://receipt-extractor-388173831980.us-central1.run.app/extract-receipt');
-            req.setMethod('POST');
-            req.setHeader('Content-Type', 'application/json');
-            req.setTimeout(120000);
-            req.setBody(JSON.serialize(reqBody));
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(BATCH_ENDPOINT);
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/json');
+        req.setTimeout(120000);
+        req.setBody(JSON.serialize(batchBody));
 
-            HttpResponse res = http.send(req);
+        HttpResponse res = new Http().send(req);
 
-            if (res.getStatusCode() < 200 || res.getStatusCode() >= 300) {
-                throw new AuraHandledException(
-                    'API 호출 실패 (' + cv.Title + '): ' + res.getStatusCode() + ' / ' + res.getBody()
-                );
-            }
+        if (res.getStatusCode() < 200 || res.getStatusCode() >= 300) {
+            throw new AuraHandledException(
+                '배치 API 호출 실패: ' + res.getStatusCode() + ' / ' + res.getBody()
+            );
+        }
 
-            ReceiptResponseDTO result =
-                (ReceiptResponseDTO) JSON.deserialize(res.getBody(), ReceiptResponseDTO.class);
+        List<ReceiptResponseDTO> rawResults =
+            (List<ReceiptResponseDTO>) JSON.deserialize(res.getBody(), List<ReceiptResponseDTO>.class);
 
-            rawResults.add(result);
+        Decimal totalAmountSum = 0;
+        List<String> summaryBlocks = new List<String>();
+
+        if (rawResults.size() != filteredVersions.size()) {
+            throw new AuraHandledException(
+                '응답 수(' + rawResults.size() + ')와 요청 파일 수(' + filteredVersions.size() + ')가 일치하지 않습니다.'
+            );
+        }
+
+        for (Integer i = 0; i < rawResults.size(); i++) {
+            ReceiptResponseDTO result = rawResults[i];
+            String fileTitle = filteredVersions[i].Title;
 
             if (result.total_amount != null) {
                 totalAmountSum += result.total_amount;
             }
-
-            summaryBlocks.add(buildSummaryBlock(cv.Title, result));
+            summaryBlocks.add(buildSummaryBlock(fileTitle, result));
         }
 
         updateExpense(expense.Id, totalAmountSum, summaryBlocks, rawResults);
@@ -170,22 +196,21 @@ public with sharing class ReceiptExtractorService {
             ItemsSummary__c = String.join(summaryBlocks, '\n\n')
         );
 
-        if (rawResults != null && !rawResults.isEmpty()) {
+        if (!rawResults.isEmpty()) {
             ReceiptResponseDTO firstResult = rawResults[0];
 
-            if (firstResult != null) {
-                upd.StoreName__c = firstResult.store_name;
+            upd.StoreName__c = firstResult.store_name;
 
-                if (firstResult.transaction_date != null) {
-                    try {
-                        upd.TransactionDate__c = Datetime.valueOf(firstResult.transaction_date);
-                    } catch (Exception e) {
-                    }
+            if (firstResult.transaction_date != null) {
+                try {
+                    upd.TransactionDate__c = Datetime.valueOf(firstResult.transaction_date);
+                } catch (Exception e) {
+                    System.debug(LoggingLevel.WARN, '날짜 파싱 실패: ' + firstResult.transaction_date + ' / ' + e.getMessage());
                 }
             }
 
             // Category: 첫 번째 결과 기준 (Picklist 매핑)
-            upd.Category__c = mapCategory(firstResult != null ? firstResult.category : null);
+            upd.Category__c = mapCategory(firstResult.category);
 
             // Summary: 여러 영수증이면 합쳐서, 하나면 그대로
             List<String> summaries = new List<String>();
@@ -215,13 +240,14 @@ public with sharing class ReceiptExtractorService {
     private static String buildSummaryBlock(String fileTitle, ReceiptResponseDTO result) {
         List<String> lines = new List<String>();
 
-        String header = '[' + (result != null && result.store_name != null ? result.store_name : fileTitle) + ']';
-        lines.add(header);
-
         if (result == null) {
+            lines.add('[' + fileTitle + ']');
             lines.add('인식 실패');
             return String.join(lines, '\n');
         }
+
+        String header = '[' + (result.store_name != null ? result.store_name : fileTitle) + ']';
+        lines.add(header);
 
         if (result.transaction_date != null) {
             lines.add('일시: ' + result.transaction_date);
@@ -256,9 +282,7 @@ public with sharing class ReceiptExtractorService {
 
     private static Boolean isSupportedImage(String ext) {
         if (ext == null) return false;
-
-        String e = ext.toLowerCase();
-        return e == 'png' || e == 'jpg' || e == 'jpeg' || e == 'webp';
+        return SUPPORTED_EXTENSIONS.contains(ext.toLowerCase());
     }
 
     private static String getMimeType(String ext) {
