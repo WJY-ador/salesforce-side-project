@@ -1,0 +1,79 @@
+<template>
+    <article class="slds-card slds-card_boundary summary-card">
+        <div class="slds-card__header slds-grid summary-card__header">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <lightning-icon
+                        icon-name="standard:account"
+                        size="medium"
+                        alternative-text="Account Summary">
+                    </lightning-icon>
+                </div>
+
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span class="summary-title" title={cardTitle}>{cardTitle}</span>
+                    </h2>
+                </div>
+            </header>
+        </div>
+
+        <div class="slds-card__body slds-card__body_inner summary-body">
+            <section class="summary-section">
+                <dl class="summary-meta-grid">
+                    <div class="summary-meta-item">
+                        <dt class="summary-meta-label">산업군</dt>
+                        <dd class="summary-meta-value">{industryGroup}</dd>
+                    </div>
+
+                    <div class="summary-meta-item">
+                        <dt class="summary-meta-label">규모</dt>
+                        <dd class="summary-meta-value">{companySize}</dd>
+                    </div>
+
+                    <div class="summary-meta-item">
+                        <dt class="summary-meta-label">현재 상태</dt>
+                        <dd class="summary-meta-value">
+                            <span class="status-badge">
+                                <span class="status-dot"></span>
+                                <span>{statusLabel}</span>
+                            </span>
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="summary-section">
+                <h3 class="summary-section-title">핵심 진료과</h3>
+                <div class="badge-group">
+                    <template for:each={tagList} for:item="tag">
+                        <span key={tag.id} class={tag.className}>{tag.label}</span>
+                    </template>
+                </div>
+            </section>
+
+            <section class="summary-section">
+                <h3 class="summary-section-title">연관 링크</h3>
+                <div class="link-list">
+                    <template for:each={linkList} for:item="link">
+                        <div key={link.id} class="link-row">
+                            <lightning-icon
+                                icon-name={link.iconName}
+                                size="x-small"
+                                class="link-icon">
+                            </lightning-icon>
+
+                            <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="link-anchor">
+                                {link.label}
+                            </a>
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </div>
+    </article>
+</template>

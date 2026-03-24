@@ -1,0 +1,17 @@
+{
+<<<<<<< HEAD
+  "orgName": "Demo company",
+=======
+  "orgName": "jywonnewbrick.io company",
+>>>>>>> de16ed3c9ecde79e1cb337d17457305211b00cbe
+  "edition": "Developer",
+  "features": ["EnableSetPasswordInApi"],
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "mobileSettings": {
+      "enableS1EncryptedStoragePref2": false
+    }
+  }
+}

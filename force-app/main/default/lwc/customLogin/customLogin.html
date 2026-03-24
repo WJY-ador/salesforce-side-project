@@ -1,0 +1,114 @@
+<template>
+    <div class="login-wrapper">
+        <div class="login-container">
+
+            <!-- Logo / Brand -->
+            <div class="login-header">
+                <div class="brand-logo">
+                    <lightning-icon icon-name="standard:portal" size="large" alternative-text="Portal"></lightning-icon>
+                </div>
+                <h1 class="login-title">Welcome Back</h1>
+                <p class="login-subtitle">Sign in to your account</p>
+            </div>
+
+            <!-- Error Message -->
+            <template lwc:if={errorMessage}>
+                <div class="error-banner" role="alert">
+                    <lightning-icon icon-name="utility:error" size="x-small" alternative-text="Error"></lightning-icon>
+                    <span>{errorMessage}</span>
+                </div>
+            </template>
+
+            <!-- Login Form -->
+            <form class="login-form" onsubmit={handleSubmit} novalidate>
+
+                <!-- Username -->
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <div class="input-wrapper">
+                        <lightning-icon icon-name="utility:user" size="x-small" class="input-icon" alternative-text="Username"></lightning-icon>
+                        <input
+                            id="username"
+                            type="text"
+                            class={usernameClass}
+                            placeholder="Enter your username"
+                            value={username}
+                            oninput={handleUsernameChange}
+                            autocomplete="username"
+                            required
+                        />
+                    </div>
+                    <template lwc:if={usernameError}>
+                        <span class="field-error">{usernameError}</span>
+                    </template>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="input-wrapper">
+                        <lightning-icon icon-name="utility:lock" size="x-small" class="input-icon" alternative-text="Password"></lightning-icon>
+                        <input
+                            id="password"
+                            type={passwordFieldType}
+                            class={passwordClass}
+                            placeholder="Enter your password"
+                            value={password}
+                            oninput={handlePasswordChange}
+                            autocomplete="current-password"
+                            required
+                        />
+                        <button
+                            type="button"
+                            class="toggle-password"
+                            onclick={togglePasswordVisibility}
+                            aria-label={togglePasswordLabel}
+                        >
+                            <lightning-icon icon-name={passwordToggleIcon} size="x-small" alternative-text="Toggle Password"></lightning-icon>
+                        </button>
+                    </div>
+                    <template lwc:if={passwordError}>
+                        <span class="field-error">{passwordError}</span>
+                    </template>
+                </div>
+
+                <!-- Remember Me & Forgot Password -->
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onchange={handleRememberMe}
+                        />
+                        <span>Remember me</span>
+                    </label>
+                    <a href={forgotPasswordUrl} class="forgot-password-link">Forgot password?</a>
+                </div>
+
+                <!-- Submit Button -->
+                <button
+                    type="submit"
+                    class="login-button"
+                    disabled={isLoading}
+                >
+                    <template lwc:if={isLoading}>
+                        <div class="spinner-wrapper">
+                            <lightning-spinner size="small" variant="inverse" alternative-text="Signing in..."></lightning-spinner>
+                        </div>
+                        <span>Signing In...</span>
+                    </template>
+                    <template lwc:else>
+                        <span>Sign In</span>
+                    </template>
+                </button>
+
+            </form>
+
+            <!-- Footer -->
+            <div class="login-footer">
+                <p class="footer-text">Don't have an account? <a href={registerUrl} class="register-link">Register here</a></p>
+            </div>
+
+        </div>
+    </div>
+</template>
