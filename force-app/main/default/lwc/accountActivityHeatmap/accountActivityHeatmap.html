@@ -1,0 +1,126 @@
+<template>
+    <lightning-card title="Activity Heatmap (최근 90일)" icon-name="standard:task">
+
+        <!-- Filter buttons (card header actions) -->
+        <div slot="actions" class="filter-actions">
+            <template for:each={filterButtons} for:item="btn">
+                <button key={btn.value}
+                    class={btn.cssClass}
+                    data-value={btn.value}
+                    onclick={handleFilter}>
+                    {btn.label}
+                </button>
+            </template>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <!-- Loading -->
+            <template lwc:if={loading}>
+                <div class="slds-p-around_medium slds-align_absolute-center">
+                    <lightning-spinner alternative-text="불러오는 중" size="small"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- Error -->
+            <template lwc:elseif={error}>
+                <p class="slds-text-color_error slds-text-body_small">{error}</p>
+            </template>
+
+            <!-- Content -->
+            <template lwc:else>
+
+                <!-- Heatmap grid -->
+                <div class="heatmap-wrap">
+                    <!-- Day-of-week labels -->
+                    <div class="dow-labels">
+                        <template for:each={dayLabels} for:item="dl">
+                            <div key={dl.id} class="dow-label">{dl.text}</div>
+                        </template>
+                    </div>
+
+                    <!-- Week columns -->
+                    <div class="weeks-wrap">
+                        <!-- Month labels row -->
+                        <div class="month-labels">
+                            <div class="month-label-offset"></div>
+                            <template for:each={weeks} for:item="week">
+                                <div key={week.id} class="month-label">{week.monthLabel}</div>
+                            </template>
+                        </div>
+                        <div class="weeks-grid">
+                        <template for:each={weeks} for:item="week">
+                            <div key={week.id} class="week-col">
+                                <template for:each={week.days} for:item="day">
+                                    <div key={day.key}
+                                        class={day.cellClass}
+                                        data-key={day.key}
+                                        title={day.label}
+                                        onclick={handleDayClick}>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="legend">
+                    <span class="legend-text">적음</span>
+                    <div class="legend-cell level-0"></div>
+                    <div class="legend-cell level-1"></div>
+                    <div class="legend-cell level-2"></div>
+                    <div class="legend-cell level-3"></div>
+                    <div class="legend-cell level-4"></div>
+                    <span class="legend-text">많음</span>
+                </div>
+
+                <!-- Empty state -->
+                <template lwc:if={isEmpty}>
+                    <p class="empty-msg">최근 90일간 활동이 없습니다.</p>
+                </template>
+
+                <!-- Drill-down popover -->
+                <template lwc:if={hasSelectedDay}>
+                    <div class="popover">
+                        <div class="popover-header">
+                            <div class="slds-grid slds-grid_vertical-align-center">
+                                <span class="popover-date">{popoverTitle}</span>
+                                <template lwc:if={selectedDay.isToday}>
+                                    <span class="slds-badge slds-badge_lightest slds-m-left_small" style="font-size: 10px; padding: 0 8px;">오늘</span>
+                                </template>
+                            </div>
+                            <button class="popover-close" onclick={handleClosePopover} title="닫기">✕</button>
+                        </div>
+
+                        <template lwc:if={hasPopoverActivities}>
+                            <ul class="act-list">
+                                <template for:each={popoverActivities} for:item="act">
+                                    <li key={act._id} class="act-item">
+                                        <span class={act.typeBadgeClass}>{act.badgeLabel}</span>
+                                        <div class="act-details">
+                                            <span class="act-subject">{act.subject}</span>
+                                            <div class="act-meta">
+                                                <template lwc:if={act.status}>
+                                                    <span class="act-status">{act.status}</span>
+                                                </template>
+                                                <template lwc:if={act.priority}>
+                                                    <span class="act-priority">{act.priority}</span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                        <template lwc:else>
+                            <p class="no-act">활동 없음</p>
+                        </template>
+                    </div>
+                </template>
+
+            </template>
+        </div>
+    </lightning-card>
+</template>

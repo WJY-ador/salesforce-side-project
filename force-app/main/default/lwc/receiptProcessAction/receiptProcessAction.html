@@ -1,0 +1,45 @@
+<template>
+    <div class="slds-p-around_medium slds-text-align_center">
+        <!-- 처리 중 -->
+        <template if:true={isRunning}>
+            <lightning-spinner alternative-text="영수증 처리 중"></lightning-spinner>
+            <p class="slds-m-top_small">영수증을 분석하고 있습니다. 잠시만 기다려주세요...</p>
+        </template>
+
+        <!-- 중복 파일 확인 -->
+        <template if:true={showDuplicateConfirm}>
+            <div class="slds-m-bottom_medium">
+                <p class="slds-text-heading_small slds-m-bottom_small">중복 파일이 감지되었습니다</p>
+                <p class="slds-m-bottom_small">아래 파일이 중복 업로드되어 있습니다:</p>
+                <ul class="slds-list_dotted slds-m-bottom_medium">
+                    <template for:each={duplicateFiles} for:item="file">
+                        <li key={file}>{file}</li>
+                    </template>
+                </ul>
+                <p class="slds-m-bottom_medium">중복 파일을 포함하여 처리할까요?</p>
+                <lightning-button
+                    label="취소"
+                    class="slds-m-right_small"
+                    onclick={closeAction}
+                ></lightning-button>
+                <lightning-button
+                    label="그래도 처리"
+                    variant="brand"
+                    onclick={runProcessing}
+                ></lightning-button>
+            </div>
+        </template>
+
+        <!-- 초기 버튼 -->
+        <template if:false={isRunning}>
+            <template if:false={showDuplicateConfirm}>
+                <p class="slds-m-bottom_medium">첨부된 영수증 파일을 AI로 처리합니다.</p>
+                <lightning-button
+                    label="처리 시작"
+                    variant="brand"
+                    onclick={startProcessing}
+                ></lightning-button>
+            </template>
+        </template>
+    </div>
+</template>
