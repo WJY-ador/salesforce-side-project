@@ -41,7 +41,10 @@ salesforce-side-project/
 |------|------|
 | experience-cloud/architecture.md | Ex Cloud 전체 아키텍처 구조 |
 | experience-cloud/issue-log-20260325.md | google-genai 패키지 경로 및 .zshrc 구문 오류 해결 (Gemini CLI) |
+| experience-cloud/sales-dashboard-implementation.md | Sales Dashboard LWC 구현 기록 (KPI 설계, salesDashboardModal, 버그수정) | ✅ 완료 |
 | integrations/google-sso.md | Google SSO 설정 및 트러블슈팅 |
+| integrations/receipt-ai-architecture.md | 영수증 AI 자동 처리 시스템 아키텍처 (Apex + Cloud Run + Vertex AI) | ✅ 완료 |
+| integrations/cloud-run-performance.md | Cloud Run 이미지 리사이즈 성능 개선 (20초 → 5~8초) | ✅ 완료 |
 | data-management/cascade-delete-recovery.md | Account 삭제로 인한 Contact cascade 삭제 복구 |
 
 ---
