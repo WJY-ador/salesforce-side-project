@@ -11,10 +11,12 @@ salesforce-side-project/
 ├── force-app/
 │   └── main/
 │       └── default/
-│           ├── lwc/               # LWC 컴포넌트
-│           │   ├── kakaoMap/      # 카카오맵 API 연동
-│           │   └── customLogin/   # LWC 커스텀 로그인
-│           └── classes/           # Apex 클래스
+│           ├── lwc/                       # LWC 컴포넌트
+│           │   ├── accountActivityHeatmap/ # Account 활동 히트맵 (Task/Event)
+│           │   ├── kakaoMap/              # 카카오맵 API 연동
+│           │   └── customLogin/           # LWC 커스텀 로그인
+│           └── classes/                   # Apex 클래스
+│               └── AccountActivityHeatmapController.cls
 ├── docs/
 │   ├── experience-cloud/          # Experience Cloud 아키텍처, 설정
 │   ├── apex/                      # Apex 공부 정리
@@ -30,6 +32,7 @@ salesforce-side-project/
 ### LWC 컴포넌트
 | 컴포넌트 | 설명 | 상태 |
 |---------|------|------|
+| accountActivityHeatmap | Account의 최근 활동(Task/Event) 밀도를 보여주는 GitHub 스타일 히트맵 | ✅ 완료 |
 | kakaoMap | Kakao Maps API를 활용한 지도 표시 + 주소 자동완성 | 🔄 진행 중 |
 | customLogin | Experience Cloud 커스텀 로그인 페이지 | ✅ 완료 |
 
