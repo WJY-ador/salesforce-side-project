@@ -3,8 +3,12 @@
     <apiVersion>62.0</apiVersion>
     <isExposed>true</isExposed>
     <targets>
-        <!-- Experience Cloud에서 사용 가능하게 노출 -->
+        <!-- Experience Cloud -->
         <target>lightningCommunity__Page</target>
         <target>lightningCommunity__Default</target>
+        <!-- Sales Cloud (Lightning App/Record/Home 페이지) -->
+        <target>lightning__AppPage</target>
+        <target>lightning__RecordPage</target>
+        <target>lightning__HomePage</target>
     </targets>
 </LightningComponentBundle>
