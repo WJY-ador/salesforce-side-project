@@ -1,177 +1,115 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Salesforce DX Project: Next Steps
-
-Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
-
-## How Do You Plan to Deploy Your Changes?
-
-Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
-
-## Configure Your Salesforce DX Project
-
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
-
-## Read All About It
-
-- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
-=======
 # Salesforce Side Project
 
-Salesforce Dev Org에서 직접 구현하며 쌓아가는 LWC 컴포넌트, Apex 클래스, 아키텍처 문서 모음입니다.
+Salesforce Dev Org에서 직접 구현하며 쌓아가는 LWC 컴포넌트, Apex 클래스, 외부 연동, 아키텍처 문서 모음입니다.
 
----
+![API-v66.0](https://img.shields.io/badge/API-v66.0-00A1E0?style=flat-square&logo=salesforce&logoColor=white) ![LWC](https://img.shields.io/badge/LWC-FF6B35?style=flat-square&logoColor=white) ![Apex](https://img.shields.io/badge/Apex-1798C1?style=flat-square&logo=salesforce&logoColor=white) ![Experience Cloud](https://img.shields.io/badge/Experience_Cloud-032D60?style=flat-square&logo=salesforce&logoColor=white) ![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white) ![Vertex AI](https://img.shields.io/badge/Vertex_AI-34A853?style=flat-square&logo=googlecloud&logoColor=white)
 
-## 📁 구조
+## 목차
+
+- [구현 목록](#구현-목록)
+- [영수증 AI 자동 처리](#영수증-ai-자동-처리)
+- [문서](#문서)
+- [시작하기](#시작하기)
+- [프로젝트 구조](#프로젝트-구조)
+
+## 구현 목록
+
+### LWC
+
+| 컴포넌트 | 설명 | 상태 |
+|:--|:--|:--:|
+| `customLogin` | Experience Cloud 커스텀 로그인 페이지 | 완료 |
+| `accountActivityHeatmap` | Account의 최근 활동(Task/Event) 밀도를 보여주는 GitHub 스타일 히트맵 | 완료 |
+| `receiptProcessAction` | Expense 레코드에서 첨부한 영수증을 AI로 일괄 처리하는 Quick Action | 완료 |
+| `kakaoMap` | Kakao Maps API를 활용한 지도 표시와 주소 자동완성 | 진행 중 |
+
+### Apex
+
+| 클래스 / 트리거 | 설명 |
+|:--|:--|
+| `CustomLoginController` | Experience Cloud 로그인 처리 |
+| `AccountActivityHeatmapController` | 히트맵용 Task/Event 조회 |
+| `KakaoMapController` | Kakao Maps API 키 제공 |
+| `ReceiptExtractorService`, `ReceiptExtractorQueueable` | 영수증 이미지를 Cloud Run으로 보내고 결과를 Expense에 반영 |
+| `ContentDocumentLinkTrigger` | 파일 첨부 이벤트 처리 |
+
+## 영수증 AI 자동 처리
+
+영수증 이미지를 AI가 읽고 Salesforce 비용 레코드(`Expense__c`)에 자동 반영하는 시스템입니다.
+단순 OCR을 넘어, 여러 장의 영수증을 하루 단위 비용으로 묶어 분류, 요약, 이상 거래 탐지까지 수행합니다.
+
+```
+Salesforce (Apex)
+  └─ 첨부 이미지를 Base64로 인코딩해 1회 요청
+      └─ Cloud Run (Python / FastAPI)
+          └─ Vertex AI Gemini 멀티모달 호출 (파일별 병렬 처리)
+              └─ JSON 반환: 상호명, 거래일시, 금액, 품목, 분류, 요약, 이상 여부
+  └─ Apex에서 결과를 집계해 Expense__c 업데이트
+```
+
+**설계 결정**
+
+- **데이터 모델**: Expense 1건 = 영수증 1장이 아니라 **하루 단위 비용 묶음**으로 정의
+- **처리 방식**: 파일마다 Trigger로 호출하지 않고, 버튼 클릭 시 1회 배치 처리
+- **품목 저장**: 품목별 레코드로 정규화하지 않고 요약 텍스트로 저장해 사용성 우선
+
+**성능**: 이미지 리사이즈(최대 1024px)와 병렬 처리를 적용해 5장 기준 처리 시간을 약 20초에서 5~8초로 단축했습니다.
+
+자세한 내용은 [아키텍처 문서](docs/integrations/receipt-ai-architecture.md)와 [성능 개선 기록](docs/integrations/cloud-run-performance.md)을 참고하세요.
+
+## 문서
+
+| 문서 | 내용 |
+|:--|:--|
+| [experience-cloud/architecture.md](docs/experience-cloud/architecture.md) | Experience Cloud 전체 아키텍처 |
+| [experience-cloud/sales-dashboard-implementation.md](docs/experience-cloud/sales-dashboard-implementation.md) | Sales Dashboard LWC 구현 기록 (KPI 설계, 모달, 버그 수정) |
+| [experience-cloud/issue-log-20260325.md](docs/experience-cloud/issue-log-20260325.md) | Gemini CLI 실행 환경 오류 해결 기록 |
+| [integrations/google-sso.md](docs/integrations/google-sso.md) | Google SSO (Auth Provider) 설정과 트러블슈팅 |
+| [integrations/receipt-ai-architecture.md](docs/integrations/receipt-ai-architecture.md) | 영수증 AI 자동 처리 아키텍처와 회고 |
+| [integrations/cloud-run-performance.md](docs/integrations/cloud-run-performance.md) | Cloud Run 이미지 리사이즈 성능 개선 |
+| [data-management/cascade-delete-recovery.md](docs/data-management/cascade-delete-recovery.md) | Account 삭제로 함께 삭제된 Contact 복구 |
+
+## 시작하기
+
+### 사전 준비
+
+- Salesforce Dev Org (Partner Central Enhanced)
+- [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli) (`sf`)
+- VS Code + Salesforce Extension Pack
+- Node.js (LWC 단위 테스트, Lint 실행 시)
+
+### 배포
+
+```bash
+sf org login web --alias devOrg --set-default
+
+# 전체 배포
+sf project deploy start --source-dir force-app
+
+# 특정 컴포넌트만 배포
+sf project deploy start --source-dir force-app/main/default/lwc/kakaoMap
+```
+
+### 테스트와 Lint
+
+```bash
+npm install
+npm run test:unit   # LWC Jest 테스트
+npm run lint        # ESLint
+```
+
+## 프로젝트 구조
 
 ```
 salesforce-side-project/
-├── force-app/
-│   └── main/
-│       └── default/
-│           ├── lwc/               # LWC 컴포넌트
-│           │   ├── kakaoMap/      # 카카오맵 API 연동
-│           │   └── customLogin/   # LWC 커스텀 로그인
-│           └── classes/           # Apex 클래스
+├── force-app/main/default/
+│   ├── classes/        # Apex 클래스
+│   ├── lwc/            # LWC 컴포넌트
+│   └── triggers/       # Apex 트리거
+├── cloud-run/          # 영수증 분석 서버 (FastAPI + Vertex AI)
 ├── docs/
-│   ├── experience-cloud/          # Experience Cloud 아키텍처, 설정
-│   ├── apex/                      # Apex 공부 정리
-│   ├── data-management/           # 데이터 관리, 이슈 정리
-│   └── integrations/              # Google SSO, 외부 API 연동
-└── README.md
+│   ├── experience-cloud/
+│   ├── integrations/
+│   └── data-management/
+└── scripts/            # Anonymous Apex, SOQL 스크립트
 ```
-
----
-
-## 🛠️ 구현 목록
-
-### LWC 컴포넌트
-| 컴포넌트 | 설명 | 상태 |
-|---------|------|------|
-| kakaoMap | Kakao Maps API를 활용한 지도 표시 + 주소 자동완성 | 🔄 진행 중 |
-| customLogin | Experience Cloud 커스텀 로그인 페이지 | ✅ 완료 |
-
-### 문서
-| 문서 | 설명 |
-|------|------|
-| experience-cloud/architecture.md | Ex Cloud 전체 아키텍처 구조 |
-| integrations/google-sso.md | Google SSO 설정 및 트러블슈팅 |
-| data-management/cascade-delete-recovery.md | Account 삭제로 인한 Contact cascade 삭제 복구 |
-
----
-
-## 🔧 환경
-- Salesforce Dev Org (Partner Central Enhanced)
-- Salesforce CLI (sf)
-- VS Code + Salesforce Extension Pack
-
----
-
-## 📦 배포 방법
-
-```bash
-# LWC 컴포넌트 배포
-sf project deploy start --source-dir force-app/main/default/lwc/kakaoMap
-
-# Apex 클래스 배포
-sf project deploy start --source-dir force-app/main/default/classes
-```
->>>>>>> de16ed3c9ecde79e1cb337d17457305211b00cbe
-=======
-# Salesforce Side Project
-
-Salesforce Dev Org에서 직접 구현하며 쌓아가는 LWC 컴포넌트, Apex 클래스, 아키텍처 문서 모음입니다.
-
----
-
-## 📁 구조
-
-```
-salesforce-side-project/
-├── force-app/
-│   └── main/
-│       └── default/
-│           ├── lwc/                       # LWC 컴포넌트
-│           │   ├── accountActivityHeatmap/ # Account 활동 히트맵 (Task/Event)
-│           │   ├── kakaoMap/              # 카카오맵 API 연동
-│           │   └── customLogin/           # LWC 커스텀 로그인
-│           └── classes/                   # Apex 클래스
-│               └── AccountActivityHeatmapController.cls
-├── docs/
-│   ├── experience-cloud/          # Experience Cloud 아키텍처, 설정
-│   ├── apex/                      # Apex 공부 정리
-│   ├── data-management/           # 데이터 관리, 이슈 정리
-│   └── integrations/              # Google SSO, 외부 API 연동
-└── README.md
-```
-
----
-
-## 🛠️ 구현 목록
-
-### LWC 컴포넌트
-| 컴포넌트 | 설명 | 상태 |
-|---------|------|------|
-| accountActivityHeatmap | Account의 최근 활동(Task/Event) 밀도를 보여주는 GitHub 스타일 히트맵 | ✅ 완료 |
-| kakaoMap | Kakao Maps API를 활용한 지도 표시 + 주소 자동완성 | 🔄 진행 중 |
-| customLogin | Experience Cloud 커스텀 로그인 페이지 | ✅ 완료 |
-
-### 문서
-| 문서 | 설명 |
-|------|------|
-| experience-cloud/architecture.md | Ex Cloud 전체 아키텍처 구조 |
-| experience-cloud/issue-log-20260325.md | google-genai 패키지 경로 및 .zshrc 구문 오류 해결 (Gemini CLI) |
-| experience-cloud/sales-dashboard-implementation.md | Sales Dashboard LWC 구현 기록 (KPI 설계, salesDashboardModal, 버그수정) | ✅ 완료 |
-| integrations/google-sso.md | Google SSO 설정 및 트러블슈팅 |
-| integrations/receipt-ai-architecture.md | 영수증 AI 자동 처리 시스템 아키텍처 (Apex + Cloud Run + Vertex AI) | ✅ 완료 |
-| integrations/cloud-run-performance.md | Cloud Run 이미지 리사이즈 성능 개선 (20초 → 5~8초) | ✅ 완료 |
-| data-management/cascade-delete-recovery.md | Account 삭제로 인한 Contact cascade 삭제 복구 |
-
----
-
-## 📝 이슈 로그 (Issue Log)
-
-<details>
-<summary><b>2026.03.25 (google-genai 패키지 경로 및 .zshrc 구문 오류 해결)</b></summary>
-
-- **시작포인트 (Starting point)**
-  - `gemini` alias 실행 시 `google-genai` 패키지를 찾지 못하는 모듈 로드 문제 발생.
-  - `source ~/.zshrc` 시 `command not found: n#` 에러가 발생하며 셸 설정이 정상적으로 로드되지 않음.
-- **과정 (Process)**
-  - **분석:** `which python3` 확인 결과 alias가 시스템 Python을 호출하고 있었으나, 패키지는 가상환경(`gemini-env`)에만 설치된 상태임을 파악.
-  - **식별:** `.zshrc` 파일 내에 줄바꿈 대신 `\n` 리터럴 문자가 포함되어 구문 오류를 일으키는 지점 발견.
-  - **조치:** `gemini` alias를 가상환경의 Python 절대 경로로 수정하고, `.zshrc` 내의 불필요한 문자를 제거하여 정리.
-- **챌린지 (Challenges)**
-  - **환경 격리:** 시스템 Python과 가상환경 간의 라이브러리 인식 차이로 인해 설치 여부와 실행 환경이 일치하지 않는 전형적인 경로 문제 발생.
-  - **설정 로드 실패:** 상단의 구문 오류로 인해 하단의 수정 사항이 반영되지 않아 즉각적인 확인이 어려웠음.
-- **결과 (Results)**
-  - `gemini` 명령어가 가상환경의 패키지를 정상 로드하여 실행됨.
-  - `source ~/.zshrc` 시 오류 없이 클린하게 로드되어 셸 환경 안정화.
-- **느낀점 (Learnings/Reflections)**
-  - 가상환경 기반의 CLI 도구는 alias 설정 시 절대 경로를 명시하는 것이 가장 안전함.
-  - 설정 파일 수정 시 눈에 보이지 않는 특수 문자나 잘못된 이스케이프가 없는지 정밀한 검토가 필요함.
-
-</details>
-
----
-
-## 🔧 환경
-- Salesforce Dev Org (Partner Central Enhanced)
-- Salesforce CLI (sf)
-- VS Code + Salesforce Extension Pack
-
----
-
-## 📦 배포 방법
-
-```bash
-# LWC 컴포넌트 배포
-sf project deploy start --source-dir force-app/main/default/lwc/kakaoMap
-
-# Apex 클래스 배포
-sf project deploy start --source-dir force-app/main/default/classes
-```
->>>>>>> aff755226626506b6fc7310545f70c966e0f9e90
