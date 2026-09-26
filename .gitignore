@@ -46,10 +46,3 @@ $RECYCLE.BIN/
 **/__pycache__/
 **/.venv/
 **/venv/
-
-.aider*
-
-# AI assistant local files
-.claude/
-CLAUDE.md
-GEMINI.md
