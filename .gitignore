@@ -48,3 +48,8 @@ $RECYCLE.BIN/
 **/venv/
 
 .aider*
+
+# AI assistant local files
+.claude/
+CLAUDE.md
+GEMINI.md
