@@ -9,7 +9,18 @@
 Tableau CRM Analytics에서 영감을 받아 **별도 라이선스 없이** Salesforce 내에서 동작하는
 매출 목표 달성률 대시보드 LWC 컴포넌트. Apex + LWC Standard만 사용.
 
+![Sales Dashboard — KPI 카드 5개 (Account 레코드 페이지 배치)](images/sales-dashboard.png)
+
+> 캡처 속 고객사 정보는 잘라내거나 가렸다.
+
+**계기:** Tableau CRM Analytics의 KPI 카드 인터랙션에서 영감을 받았다. 카드 안에 미니 차트가 내장되어 있고,
+그 차트를 클릭하면 전체 데이터가 동적으로 바뀌는 UX가 인상적이었다. 이걸 Apex + LWC만으로도 구현할 수 있을 것 같았다.
+
+**문제 인식:** 영업 팀이 매출 현황을 보려면 보통 리포트/대시보드를 쓰거나 Tableau CRM 라이선스를 별도로 구매해야 한다.
+하지만 Standard Opportunity 데이터만으로도 핵심 지표는 충분히 계산 가능하고, LWC로 인터랙티브하게 만들면 더 빠르게 확인할 수 있다.
+
 **설계 원칙:**
+- 어떤 도메인에서도 배포 가능한 Standard LWC — App Page, Record Page, Experience Cloud 전부 가능
 - Custom Field / Custom Object 없음 — Standard Field 9개만 사용, 어떤 Org에서든 즉시 동작
 - 드롭다운 필터 없음 — 카드 안 미니 차트(바/스파크라인)를 직접 클릭해서 월 변경
 - SLDS2 디자인 시스템 기반 UI
@@ -35,6 +46,37 @@ Tableau CRM Analytics에서 영감을 받아 **별도 라이선스 없이** Sale
 | ⑤ | 당월 예상 매출액 | Won + Σ(Amount × Probability/100) for Open |
 
 > Stage 하드코딩 없이 Probability 필드값만 참조 → 커스텀 Sales Process에서도 정확 동작
+
+### KPI 설계 검토 (2026-03-24)
+
+| 카드 | 표시 명칭 | 실제 의미 | 비고 |
+|---|---|---|---|
+| ① | 당월 목표 매출액 | 이번 달 전체 Opp Amount 합계 (Won + Open) | "목표"가 아닌 파이프라인 총액 |
+| ② | 현재 달성률 | Closed Won ÷ 전체 Opp | 클로징률에 가까운 지표 |
+| ③ | 당월 매출액 | Closed Won Amount | ②의 분자와 동일 정보 |
+| ④ | 예상 달성률 | (Won + 가중예상) ÷ 전체 Opp | ⑤의 비율 표현 |
+| ⑤ | 당월 예상 매출액 | Won + Probability 가중합 | ④의 분자와 동일 정보 |
+
+**한계 인식:** "당월 목표 매출액"은 실제 외부 Quota가 아니다. Opportunity Amount 합산값이라 담당자가 Opp를 추가/삭제하면
+목표와 달성률이 함께 변한다. 진정한 Quota 기반 달성률을 재려면 Forecast 오브젝트 또는 커스텀 오브젝트가 필요하다.
+
+**결정:** Standard 필드만 사용하는 설계 원칙을 지키되 한계를 인지하고 유지. 파이프라인 클로징 관리 도구로서의 가치는 충분하다.
+
+---
+
+## 이득
+
+**학습 관점**
+- Apex Wrapper Class 설계 및 데이터 가공 패턴
+- LWC `@wire` vs imperative call 차이와 사용 시점
+- LWC Custom Event로 컴포넌트 간 통신 (단방향 데이터 흐름)
+- SVG 기반 미니 차트 직접 렌더링 (외부 라이브러리 없이)
+- SLDS2 디자인 시스템 적용
+
+**실무 관점**
+- Tableau CRM 라이선스 없이 비슷한 수준의 매출 인사이트 제공
+- Standard 필드만 쓰기 때문에 어떤 고객사 Org에도 즉시 배포 가능한 재사용 컴포넌트
+- 월별 트렌드를 드릴다운 없이 카드 하나에서 바로 파악
 
 ---
 
